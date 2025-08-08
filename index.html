@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>High & Wild — Card Game (Truth & Dare, Extreme)</title>
+<meta name="description" content="High & Wild — adult-only truth & dare card game. Use safe word & consent."/>
+<style>
+  :root{
+    --bg:#040204; --card:#0f0f10; --accent:#d1001a; --muted:#bdbdbd;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#030203,#070707);color:#fff}
+  .wrap{max-width:940px;margin:12px auto;padding:16px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:20px}
+  .lead{color:var(--muted);font-size:13px;margin-top:4px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 14px;border-radius:10px;color:#fff;font-weight:700;cursor:pointer}
+  .btn.primary{background:linear-gradient(90deg,#5a0000,var(--accent));border:none;box-shadow:0 10px 30px rgba(211,0,0,0.12)}
+  .card-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .card{background:linear-gradient(180deg,#111,#151515);border-radius:14px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,0.6);min-height:220px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+  .cat{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.6px;margin-bottom:8px}
+  .prompt{font-size:20px;text-align:center;line-height:1.35;padding:6px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .chip{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted)}
+  .meta{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .small{font-size:13px;color:var(--muted)}
+  footer{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+  .controls-bottom{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  input[type="text"]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#0b0b0b;color:#fff}
+  .deckcount{font-size:12px;color:var(--muted);margin-top:8px}
+  .timer-box{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .timer{font-weight:800;font-size:20px;color:var(--accent)}
+  @media (max-width:760px){ .card-row{grid-template-columns:1fr} .prompt{font-size:18px} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🔥 High & Wild — Card Game</h1>
+        <div class="lead">Adult-only Truth & Dare decks — extreme mode available. Use safe word.</div>
+      </div>
+      <div class="small">No minors • Consent required • Stop at safe word</div>
+    </header>
+
+    <div class="controls">
+      <button id="truthBtn" class="btn">❤️ Draw Truth</button>
+      <button id="dareBtn" class="btn">🔥 Draw Dare</button>
+      <button id="bothBtn" class="btn">🎲 Both (Random)</button>
+      <button id="reshuffleBtn" class="btn">♻️ Reshuffle Decks</button>
+
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div class="small">Safe word</div>
+        <input id="safeWord" placeholder="optional" type="text" />
+      </div>
+    </div>
+
+    <div class="card-row" aria-live="polite">
+      <div class="card" id="truthCard" aria-label="Truth card area">
+        <div class="cat">Truth Deck</div>
+        <div id="truthPrompt" class="prompt">Press <strong>Draw Truth</strong> to flip a card. Skip = sip/hit. Consent first.</div>
+        <div class="chips" id="truthChips"></div>
+        <div class="deckcount" id="truthCount"></div>
+      </div>
+
+      <div class="card" id="dareCard" aria-label="Dare card area">
+        <div class="cat">Dare Deck</div>
+        <div id="darePrompt" class="prompt">Press <strong>Draw Dare</strong> to flip a card. Some dares are timed.</div>
+        <div class="chips" id="dareChips"></div>
+        <div class="deckcount" id="dareCount"></div>
+        <div class="timer-box">
+          <div class="small">Timer Mode</div>
+          <select id="timerSelect" style="padding:6px;border-radius:6px;background:#0b0b0b;color:#fff;border:1px solid rgba(255,255,255,0.04)">
+            <option value="0">Off</option>
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60">60s</option>
+          </select>
+          <div id="timerDisplay" class="timer hidden">00:00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-bottom">
+      <button id="nextBtn" class="btn primary">Flip / Next</button>
+      <button id="toggleExtreme" class="btn">Toggle Extreme: ON</button>
+      <div class="small">Keyboard: T = truth, D = dare, B = both</div>
+    </div>
+
+    <footer>
+      <div class="small">Tip: hydrate, pace drinks & hits, check consent often. Revoke any tokens you used to host this file. Photos/recordings — only by mutual explicit consent.</div>
+    </footer>
+  </div>
+
+<script>
+/* ---------------------------
+   TRUTH & DARE decks
+   50+ truths, 70 extreme dares
+   Timer mode built-in
+   --------------------------- */
+
+/* TRUTHS (about 55 items) */
+const TRUTH_DECK = [
+  "Tell the most taboo fantasy you've had about your partner.",
+  "Describe the dirtiest dream you've had about your partner.",
+  "What's a sexual habit you've never told anyone?",
+  "When did you first feel turned on by your partner? Describe it.",
+  "Have you ever fantasized about public sex with your partner? Where?",
+  "What outfit would you like me to rip off right now?",
+  "Have you ever wanted to be dominated by your partner? Explain.",
+  "What's a secret kink you haven't shared before?",
+  "If you could pick one place to have wild sex with me, where?",
+  "What's the naughtiest text you'd send me right now?",
+  "Have you ever had a threesome fantasy? Explain boundaries you'd set.",
+  "What scent or texture of mine drives you wild?",
+  "Which of my body parts would you worship first?",
+  "What's the boldest thing you want me to try tonight?",
+  "Have you ever been caught in a compromising sexual situation? Tell it.",
+  "What are three words to describe your hottest memory of us?",
+  "Do you prefer slow sensual or rough and fast? Why?",
+  "What would you like me to whisper in your ear during sex?",
+  "Have you ever role-played? Which scenario turned you on most?",
+  "What's something erotic you've never done but want to try with me?",
+  "Name a scene from a film that turns you on — describe it with me.",
+  "Would you ever want to be restrained? Explain limits and safe word.",
+  "What's the one position you wish we could do more often?",
+  "What's something you want to hear me say during sex?",
+  "Have you ever watched something sexual that surprised you? Share it.",
+  "How do you imagine a perfect 'all day alone' with me — from morning?",
+  "What's one dirty thought you had about me today?",
+  "Would you rather be watched or watch me? Explain why.",
+  "If you had to pick a public place (safe & private-ish) for a quick moment, where?",
+  "What's your favorite sound I make when I like something?",
+  "Have you ever been jealous of someone who got your partner's attention? Tell.",
+  "What perfume/cologne of mine makes you weak?",
+  "What's the sexiest body modification (tattoo/piercing) you like—on me or someone else?",
+  "Have you ever wanted to do sensory play? What would you try?",
+  "Tell a flirty memory that started as a joke but turned hot.",
+  "What’s the most scandalous thing you’d want to try if we had no limits?",
+  "Have you ever made a secret playlist for sex? Share one song.",
+  "What's the one compliment you want to hear during intimacy?",
+  "Do you prefer morning or late-night intimacy and why?",
+  "What's a risky fantasy you keep imagining about me?",
+  "If we swapped roles for an hour, what would you do first?",
+  "Describe how you'd seduce me for 10 minutes straight.",
+  "What's the weirdest place you've wanted to kiss me?",
+  "Have you ever felt attracted to someone else while with me? Tell.",
+  "What place on your body is a hidden erogenous zone?",
+  "What's the most sensual thing you can do with one hand?",
+  "When I touch you, where does it spark the most desire?",
+  "If you could make one rule for tonight, what would it be?",
+  "What's a sexy secret you've never admitted out loud?",
+  "Would you ever try tantric or prolonged pleasure? Why/why not?"
+];
+
+/* DARES (70 extreme items) */
+const DARE_DECK = [
+  "Slowly remove one item of clothing while keeping eye contact the whole time.",
+  "Perform a 90-second striptease to the song your partner picks.",
+  "Take a body shot from any non-genital area your partner chooses.",
+  "Let your partner blindfold you and tease you with ice for 2 minutes.",
+  "Tie a soft scarf around one wrist and let your partner guide your actions for 60s.",
+  "Feed each other sticky chocolate or whipped cream from the body (consensual).",
+  "Let your partner write a naughty message on your skin; do not remove it for 10 min.",
+  "Wear only one item of clothing for the next 10 minutes.",
+  "Take three hits together, then perform a seductive 60-second dance.",
+  "Let your partner pick a spot and kiss it for 60 seconds without stopping.",
+  "Give a 3-minute sensual massage focusing on erogenous zones.",
+  "Let your partner spank you playfully (agree safe word; start gentle).",
+  "Take a playful bite (gentle) on a spot your partner chooses.",
+  "Slowly remove your partner's clothing with just your mouth for 30s.",
+  "Perform 60 seconds of whispered fantasies into your partner's ear.",
+  "Do a 60-second lap dance while they sit and admire.",
+  "Let your partner place an ice cube anywhere on your body and watch reaction.",
+  "Trace the outline of your partner's lips with your tongue slowly.",
+  "Close your eyes and allow partner to guide your hands for 90 seconds.",
+  "Act out a short (1-minute) fantasy that your partner describes to you.",
+  "Switch clothes with your partner for two rounds.",
+  "Eat an edible placed on your partner (consensual and safe).",
+  "Slowly remove one sock using only your teeth.",
+  "Hold a sexy pose for 60 seconds while partner photographs you (private).",
+  "Blindfolded kiss session: partner chooses where to kiss you for 2 minutes.",
+  "Take a shot poured from a partner-chosen location (non-genital).",
+  "Let your partner whisper 5 commands; follow them all literally.",
+  "Lie down and let partner kiss every exposed skin area for 90 seconds.",
+  "Give a detailed 60-second verbal description of what you'd do in bed.",
+  "Act out a movie sex scene for 60 seconds.",
+  "Take off an item using only your teeth while partner watches.",
+  "Let partner trace a heart on your body with their tongue for 30s.",
+  "Wear blindfold and try to identify 5 textures your partner uses.",
+  "Slow, sensual breathing challenge: breathe in rhythm while close for 60s.",
+  "Let partner lightly tie your hands and tease you (consensual).",
+  "Do 30 pushups then reward partner with a long, slow kiss.",
+  "Perform a seductive commercial about your partner for 45 seconds.",
+  "Take turns giving 5 compliments in an erotic voice; worst gets a sip.",
+  "Slowly unzip partner's clothes using only your teeth for 30s.",
+  "Make a private 20-second audio describing a fantasy and play it back.",
+  "Let partner choose a dressing rule: remove one item when told.",
+  "For the next dare, do it with one hand behind your back.",
+  "Trade a secret fantasy and then act out the tiniest part of it.",
+  "Perform a sensual whispering sequence for 90 seconds.",
+  "Pretend you're strangers meeting in a bar way too attracted—act for 2 minutes.",
+  "Let partner guide where to kiss you using only a fingertip (10 moves).",
+  "Slowly lick a line of something sweet along partner's skin (consensual).",
+  "Wear an item of partner's clothing for the next half hour.",
+  "Take three hits and tell a hidden fetish in a whisper.",
+  "Let partner blindfold you and feed you three different treats to guess.",
+  "Let partner choose a short safe word gesture and practice it now.",
+  "Hold eye contact for 60 seconds while describing a sexy memory.",
+  "Spin and kiss: spin a bottle/phone and kiss where it points (consensual).",
+  "Do a 45-second sensual breathing session close to partner's ear.",
+  "Give a slow, guided hand exploration of your partner's torso (consensual).",
+  "Alternate 20-second kisses for two minutes without stopping.",
+  "Let partner place a temporary mark (lipstick) somewhere and leave it.",
+  "Roleplay being boss/employee for 2 minutes—keep it suggestive not harmful.",
+  "Let partner guide your mouth to a non-genital spot for 30s.",
+  "Slowly slide an accessory off partner's body using only your mouth.",
+  "Give your partner a personalized sultry haiku and recite it sensually.",
+  "Let partner blindfold you and trace their initials on your body.",
+  "Lay back; partner gives a 2-minute kiss trail from neck to hip.",
+  "Let partner pick 3 quick commands to do in order (consensual).",
+  "Make a believable seductive whisper and repeat until partner reacts.",
+  "Give 3 slow, intentional kisses—longer each time—on a chosen spot.",
+  "Play 'no hands' for one exchange: use mouth only to pass a small item.",
+  "Hold partner's face and kiss them like it's the last time for 30s.",
+  "Let partner pick a playful spanking count (up to agreed limit).",
+  "Slowly remove partner's accessory (belt, scarf) sensually and put it on.",
+  "Use your mouth to remove a piece of fruit from partner's hand (consensual).",
+  "Act as if it's your first time with your partner and dramatize seduction.",
+  "Take turns whispering the dirtiest five words you can think of.",
+  "Do a slow strip until you are down to underwear while partner times.",
+  "Let partner choose an intimate area to kiss for 45 seconds.",
+  "Dance together with no music for 60 seconds as sensually as possible",
+  "Trade one item of clothing permanently for the next 30 minutes.",
+  "Act out a flirtatious voicemail you would leave them after a night like tonight.",
+  "Give a 2-minute blindfolded 'guide my hand' instruction session.",
+  "Let partner choose a playful, non-harmful restraint and tease for 2 minutes."
+];
+
+/* Shuffle utility */
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
+
+/* Game state */
+let truthDeck = shuffle(TRUTH_DECK.slice());
+let dareDeck = shuffle(DARE_DECK.slice());
+let tIndex = 0, dIndex = 0;
+let extremeOn = true;
+
+/* UI refs */
+const truthPromptEl = document.getElementById('truthPrompt');
+const darePromptEl = document.getElementById('darePrompt');
+const truthCountEl = document.getElementById('truthCount');
+const dareCountEl = document.getElementById('dareCount');
+const truthChips = document.getElementById('truthChips');
+const dareChips = document.getElementById('dareChips');
+const timerSelect = document.getElementById('timerSelect');
+const timerDisplay = document.getElementById('timerDisplay');
+
+/* update counts */
+function updateCounts(){ truthCountEl.textContent = `Remaining: ${Math.max(0, truthDeck.length - tIndex)}`; dareCountEl.textContent = `Remaining: ${Math.max(0, dareDeck.length - dIndex)}`; }
+updateCounts();
+
+/* draw functions */
+function drawTruth(){
+  if(tIndex >= truthDeck.length){ flash('Truth deck reshuffling...'); truthDeck = shuffle(TRUTH_DECK.slice()); tIndex = 0; }
+  const card = truthDeck[tIndex++]; displayTruth(card); updateCounts();
+}
+function drawDare(){
+  if(dIndex >= dareDeck.length){ flash('Dare deck reshuffling...'); dareDeck = shuffle(DARE_DECK.slice()); dIndex = 0; }
+  const card = dareDeck[dIndex++]; displayDare(card); updateCounts();
+}
+function drawBoth(){ Math.random()<0.5 ? drawTruth() : drawDare(); }
+
+/* display helpers */
+function displayTruth(text){
+  truthPromptEl.textContent = "Truth — " + text;
+  truthChips.innerHTML = '';
+  const c=document.createElement('div'); c.className='chip'; c.textContent='Truth'; truthChips.appendChild(c);
+  if(extremeOn){ const w=document.createElement('div'); w.className='chip'; w.textContent='Explicit'; truthChips.appendChild(w); }
+}
+function displayDare(text){
+  darePromptEl.textContent = "Dare — " + text;
+  dareChips.innerHTML = '';
+  const c=document.createElement('div'); c.className='chip'; c.textContent='Dare'; dareChips.appendChild(c);
+  if(extremeOn){ const w=document.createElement('div'); w.className='chip'; w.textContent='Extreme'; dareChips.appendChild(w); }
+
+  // timer logic
+  const sel = parseInt(timerSelect.value,10);
+  if(sel > 0){
+    runTimer(sel);
+  } else {
+    hideTimer();
+  }
+}
+
+/* timer functions */
+let timerInterval=null;
+function runTimer(seconds){
+  clearInterval(timerInterval);
+  timerDisplay.classList.remove('hidden');
+  let remaining=seconds;
+  timerDisplay.textContent = formatTime(remaining);
+  timerInterval = setInterval(()=> {
+    remaining--;
+    if(remaining<=0){
+      clearInterval(timerInterval);
+      timerDisplay.textContent = "00:00";
+      // tiny vibration hint if available
+      try{ navigator.vibrate && navigator.vibrate(200); }catch(e){}
+      flash('Time\'s up — check consent & continue.');
+      setTimeout(()=> timerDisplay.classList.add('hidden'), 800);
+    } else {
+      timerDisplay.textContent = formatTime(remaining);
+    }
+  },1000);
+}
+function hideTimer(){ clearInterval(timerInterval); timerDisplay.classList.add('hidden'); }
+function formatTime(s){ const mm = Math.floor(s/60).toString().padStart(2,'0'); const ss = (s%60).toString().padStart(2,'0'); return `${mm}:${ss}`; }
+
+/* small flash text temporarily on truth card */
+function flash(msg){
+  const prev = truthPromptEl.textContent;
+  truthPromptEl.textContent = msg;
+  setTimeout(()=> truthPromptEl.textContent = prev, 1400);
+}
+
+/* event bindings */
+document.getElementById('truthBtn').addEventListener('click', drawTruth);
+document.getElementById('dareBtn').addEventListener('click', drawDare);
+document.getElementById('bothBtn').addEventListener('click', drawBoth);
+document.getElementById('reshuffleBtn').addEventListener('click', ()=> {
+  truthDeck = shuffle(TRUTH_DECK.slice()); dareDeck = shuffle(DARE_DECK.slice()); tIndex=0; dIndex=0; updateCounts(); flash('Decks reshuffled');
+});
+document.getElementById('nextBtn').addEventListener('click', ()=> drawBoth());
+document.getElementById('toggleExtreme').addEventListener('click', ()=> {
+  extremeOn = !extremeOn;
+  document.getElementById('toggleExtreme').textContent = 'Toggle Extreme: ' + (extremeOn ? 'ON' : 'OFF');
+  flash(extremeOn ? 'Explicit prompts enabled.' : 'Explicit prompts disabled.');
+});
+timerSelect.addEventListener('change', ()=> { if(parseInt(timerSelect.value,10)===0) hideTimer(); });
+
+/* keyboard shortcuts for desktop */
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='t' || e.key==='T') drawTruth();
+  if(e.key==='d' || e.key==='D') drawDare();
+  if(e.key==='b' || e.key==='B') drawBoth();
+});
+
+/* init */
+window.addEventListener('load', ()=> {
+  updateCounts();
+  hideTimer();
+});
+</script>
+</body>
+</html>
